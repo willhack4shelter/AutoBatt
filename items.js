@@ -16,13 +16,20 @@ const RARITIES = {
 
 // Erzeuge programmgesteuert eine größere Items-Liste (50 Items), leicht anpassbar
 const ITEMS = [];
-const SHAPES = [[1,1],[1,2],[2,1],[2,2],[1,3],[3,1]];
+// shapes: can be simple [w,h] or a mask (array of rows) to allow L-shapes
+const SHAPES = [
+  [1,1],[1,2],[2,1],[2,2],[1,3],[3,1],
+  // L-shape masks (3x2 etc)
+  {w:2,h:2,mask:[[1,0],[1,1]]},
+  {w:3,h:2,mask:[[1,0,0],[1,1,1]]}
+];
 // rarity distribution: more commons, few rares/epics/legendary
 const RARITY_ORDER = ['common','common','common','common','common','common','rare','rare','rare','epic','epic','legendary'];
 
 function addTemplate(i){
   const rarity = RARITY_ORDER[Math.floor(Math.random()*RARITY_ORDER.length)];
-  const shape = SHAPES[i % SHAPES.length];
+  const rawShape = SHAPES[i % SHAPES.length];
+  const shape = (rawShape.mask) ? {w:rawShape.w,h:rawShape.h,mask:rawShape.mask} : [rawShape[0], rawShape[1]];
   // scale stats by index and rarity
   const base = 4 + Math.floor(i*1.6);
   const rarityScale = ({common:1, rare:1.6, epic:2.5, legendary:4})[rarity]||1;
@@ -32,8 +39,13 @@ function addTemplate(i){
   const price = Math.round((10 + i*8) * rarityScale);
   const dropChance = Math.max(0.01, Math.min(0.7, 0.6 / rarityScale * (1 - i/120)));
   const key = `itm_${i}`;
-  const name = `${rarity.charAt(0).toUpperCase()+rarity.slice(1)} Item ${i}`;
-  ITEMS.push({key,name,shape:[shape[0],shape[1]],damage,heal,price,cooldown:Number(cooldown.toFixed(2)),dropChance:Number(dropChance.toFixed(3)),rarity});
+  // nicer fantasy names from base nouns
+  const baseNames = ['Schwert','Schild','Trank','Dolch','Bogen','Stab','Rüstung','Ring','Amulett','Faustkeil'];
+  const addons = ['der Morgenröte','des Sturms','vom Düsterwald','aus Feuerstein','der Tiefen','des Wanderers','des Alten','der Nebelinsel','des Phönix','des Windes'];
+  const name = `${baseNames[i % baseNames.length]} ${addons[i % addons.length]}`;
+  const template = {key,name,damage,heal,price,cooldown:Number(cooldown.toFixed(2)),dropChance:Number(dropChance.toFixed(3)),rarity};
+  if(Array.isArray(shape)) template.shape = [shape[0],shape[1]]; else template.shape = {w:shape.w,h:shape.h,mask:shape.mask};
+  ITEMS.push(template);
 }
 
 for(let i=1;i<=50;i++) addTemplate(i);
@@ -45,8 +57,17 @@ function createItemInstance(templateKey, owner){
   const t = ITEMS.find(it => it.key===templateKey);
   if(!t) throw new Error('Unknown item key '+templateKey);
   const id = 'itm-'+(_nextItemId++);
+  // normalize shape to object {w,h,mask}
+  let normShape;
+  if(Array.isArray(t.shape)){
+    normShape = {w: t.shape[0], h: t.shape[1], mask: null};
+  }else if(t.shape && typeof t.shape === 'object'){
+    normShape = {w: t.shape.w, h: t.shape.h, mask: t.shape.mask || null};
+  }else{
+    normShape = {w:1,h:1,mask:null};
+  }
   return {
-    id, key:t.key, name:t.name, shape: t.shape.slice(), damage:t.damage, heal:t.heal, price:t.price,
+    id, key:t.key, name:t.name, shape: normShape, damage:t.damage, heal:t.heal, price:t.price,
     cooldown: Number(t.cooldown), dropChance:t.dropChance, rarity:t.rarity, owner: owner||'shop', nextAvailable: null
   };
 }

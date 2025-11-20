@@ -38,7 +38,9 @@ function createDebugPanel(){
 window.addEventListener('load', ()=>{ try{ createDebugPanel(); }catch(e){console.error('Debug panel init failed', e);} });
 
 const PLAYER_SLOTS = {cols:6, rows:3};
-const STORAGE_SLOTS = {cols:8, rows:2};
+const STORAGE_SLOTS = {cols:10, rows:4};
+const PLAYER_STORAGE_SLOTS = {cols:6, rows:6};
+const ENEMY_STORAGE_SLOTS = {cols:6, rows:6};
 const BATTLE_DURATION = 12.0; // Sekunden
 
 let state = {
@@ -62,8 +64,12 @@ function init(){
   state.playerGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.enemyGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.storageGrid = makeGridArray(STORAGE_SLOTS.cols, STORAGE_SLOTS.rows);
+  state.playerStorageGrid = makeGridArray(PLAYER_STORAGE_SLOTS.cols, PLAYER_STORAGE_SLOTS.rows);
+  state.enemyStorageGrid = makeGridArray(ENEMY_STORAGE_SLOTS.cols, ENEMY_STORAGE_SLOTS.rows);
   buildGrid('player-inv', PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, state.playerGrid, 'player');
+  buildGrid('player-storage', PLAYER_STORAGE_SLOTS.cols, PLAYER_STORAGE_SLOTS.rows, state.playerStorageGrid, 'player-storage');
   buildGrid('enemy-inv', PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, state.enemyGrid, 'enemy');
+  buildGrid('enemy-storage', ENEMY_STORAGE_SLOTS.cols, ENEMY_STORAGE_SLOTS.rows, state.enemyStorageGrid, 'enemy-storage');
   buildGrid('storage-grid', STORAGE_SLOTS.cols, STORAGE_SLOTS.rows, state.storageGrid, 'storage');
 
   // try to load saved state; if none, build defaults
@@ -95,9 +101,12 @@ function buildGrid(containerId, cols, rows, gridArray, owner){
     slot.className = 'slot';
     slot.dataset.index = i;
     slot.dataset.owner = owner;
-    slot.addEventListener('dragover', onDragOverSlot);
-    slot.addEventListener('dragleave', onDragLeaveSlot);
-    slot.addEventListener('drop', onDropOnSlot);
+    // NPC inventory should not accept drops
+    if(owner !== 'enemy' && owner !== 'enemy-storage'){
+      slot.addEventListener('dragover', onDragOverSlot);
+      slot.addEventListener('dragleave', onDragLeaveSlot);
+      slot.addEventListener('drop', onDropOnSlot);
+    }
     container.appendChild(slot);
   }
 }
@@ -106,22 +115,25 @@ function buildShop(){
   const shop = document.getElementById('shop-items');
   shop.innerHTML='';
   // create instances for shop (one of each template)
-  if(!state.shopInstances || state.shopInstances.length===0){
-    state.shopInstances = [];
-    GameItems.ITEMS.forEach(t => {
-      const inst = GameItems.createItemInstance(t.key,'shop');
-      state.shopInstances.push(inst);
-    });
-  }
+  // spawn or refresh 5 random items
+  spawnShopItems();
   state.shopInstances.forEach(inst=>{
     const el = renderShopItem(inst);
     // add click-to-buy handler
-    el.addEventListener('click', (ev)=>{
-      ev.stopPropagation();
-      buyFromShop(inst);
-    });
+    el.addEventListener('click', (ev)=>{ ev.stopPropagation(); buyFromShop(inst); });
     shop.appendChild(el);
   });
+}
+
+function spawnShopItems(){
+  // pick 5 random templates
+  state.shopInstances = [];
+  const pool = GameItems.ITEMS.slice();
+  for(let k=0;k<5;k++){
+    const idx = Math.floor(Math.random()*pool.length);
+    const t = pool.splice(idx,1)[0];
+    state.shopInstances.push(GameItems.createItemInstance(t.key,'shop'));
+  }
 }
 
 function buyFromShop(inst){
@@ -129,6 +141,9 @@ function buyFromShop(inst){
   if(state.gold < inst.price){ log(`Nicht genug Gold für ${inst.name} (Preis ${inst.price})`); return; }
   // try to place into player inventory first
   const clone = GameItems.createItemInstance(inst.key,'player');
+  // remove shop instance so it disappears
+  const sidx = state.shopInstances.findIndex(s=>s.id===inst.id);
+  if(sidx>=0) state.shopInstances.splice(sidx,1);
   const placed = placeIntoFirstFree(state.playerGrid, PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, clone);
   if(!placed){
     // try storage
@@ -136,7 +151,7 @@ function buyFromShop(inst){
     if(!placed2){ log('Kein Platz im Inventar oder Storage, Kauf abgebrochen.'); return; }
   }
   state.gold -= inst.price;
-  log(`Gekauft: ${inst.name} für ${inst.price} Gold.`);
+  colorLog(`Gekauft: ${inst.name} für ${inst.price} Gold.`, 'player');
   saveGameState();
   renderAllGrids(); renderHUD();
 }
@@ -145,8 +160,9 @@ function renderShopItem(item){
   const el = document.createElement('div');
   el.className = `item ${GameItems.RARITIES[item.rarity].colorClass}`;
   el.draggable = true;
-  el.style.width = `${item.shape[0]*40 + (item.shape[0]-1)*6}px`;
-  el.style.height = `${item.shape[1]*40 + (item.shape[1]-1)*6}px`;
+  const sw = item.shape.w || 1, sh = item.shape.h || 1;
+  el.style.width = `${sw*40 + (sw-1)*6}px`;
+  el.style.height = `${sh*40 + (sh-1)*6}px`;
   el.dataset.itemId = item.id;
   el.innerHTML = `<div>${item.name}</div><small>${item.damage?('Dmg:'+item.damage):''}${item.heal?(' Heal:'+item.heal):''} CD:${item.cooldown}s</small>`;
   el.addEventListener('dragstart', (ev)=>onDragStart(ev,item,el));
@@ -243,11 +259,14 @@ function getGridByOwner(owner){
 }
 
 function canPlaceShape(grid, cols, rows, startIndex, shape){
-  const [w,h] = shape;
+  // shape is normalized object: {w,h,mask}
+  const w = shape.w, h = shape.h, mask = shape.mask;
   const startR = Math.floor(startIndex/cols), startC = startIndex%cols;
   const cells = [];
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
+      // if mask exists and mask[y][x] === 0, skip this cell (no tile)
+      if(mask && (!mask[y] || !mask[y][x])) continue;
       const c = startC + x; const r = startR + y;
       if(c>=cols || r>=rows) return {ok:false};
       const idx = r*cols + c;
@@ -262,6 +281,8 @@ function renderAllGrids(){
   renderGrid('player-inv', state.playerGrid, PLAYER_SLOTS.cols);
   renderGrid('enemy-inv', state.enemyGrid, PLAYER_SLOTS.cols);
   renderGrid('storage-grid', state.storageGrid, STORAGE_SLOTS.cols);
+  renderGrid('player-storage', state.playerStorageGrid, PLAYER_STORAGE_SLOTS.cols);
+  renderGrid('enemy-storage', state.enemyStorageGrid, ENEMY_STORAGE_SLOTS.cols);
   renderShopInstances();
 }
 
@@ -282,16 +303,36 @@ function renderGrid(containerId, gridArray, cols){
     const el = document.createElement('div');
     el.className = `item grid-item ${GameItems.RARITIES[inst.rarity].colorClass}`;
     el.dataset.itemId = inst.id;
-    el.draggable = true;
+    // enemy items should not be draggable
+    const isEnemy = (inst.owner==='enemy' || inst.owner==='enemy-storage');
+    el.draggable = !isEnemy;
     // account for grid padding (6px) and gap (6px)
     const pad = 6; const gap = 6; const cell = 40;
     el.style.left = `${pad + c*(cell+gap)}px`;
     el.style.top = `${pad + r*(cell+gap)}px`;
-    el.style.width = `${inst.shape[0]*40 + (inst.shape[0]-1)*6}px`;
-    el.style.height = `${inst.shape[1]*40 + (inst.shape[1]-1)*6}px`;
+    // shape is normalized {w,h,mask}
+    const sw = inst.shape.w || 1, sh = inst.shape.h || 1;
+    el.style.width = `${sw*40 + (sw-1)*6}px`;
+    el.style.height = `${sh*40 + (sh-1)*6}px`;
     el.innerHTML = `<div>${inst.name}</div><small>${inst.damage?('D:'+inst.damage):''}${inst.heal?(' H:'+inst.heal):''}</small>`;
-    el.addEventListener('dragstart', (ev)=>onDragStart(ev,inst,el));
+    if(!isEnemy) el.addEventListener('dragstart', (ev)=>onDragStart(ev,inst,el));
     el.addEventListener('dragend', onDragEnd);
+    // add tooltip on hover
+    el.title = `Dmg:${inst.damage || 0} Heal:${inst.heal || 0} CD:${inst.cooldown}s Price:${inst.price} Rarity:${inst.rarity}`;
+    // right-click to sell for player's items
+    const isPlayerItem = (inst.owner==='player' || inst.owner==='player-storage');
+    if(isPlayerItem){
+      el.addEventListener('contextmenu', (ev)=>{
+        ev.preventDefault();
+        // sell for half price
+        const sellPrice = Math.max(1, Math.round((inst.price||0)/2));
+        // remove instance from grids
+        removeInstanceFromAll(inst.id);
+        state.gold = (state.gold||0) + sellPrice;
+        colorLog(`Verkauft ${inst.name} für ${sellPrice} Gold`, 'player');
+        renderAllGrids(); renderHUD(); saveGameState();
+      });
+    }
     container.appendChild(el);
   }
 }
@@ -333,12 +374,7 @@ function placeIntoFirstFree(grid, cols, rows, inst){
 
 function startBattle(){
   if(state.battle) return; // already running
-  state.battle = {
-    startTime: performance.now(),
-    tickTimer: null,
-    elapsed:0,
-    end:false
-  };
+  state.battle = { tickTimer: null };
   // set nextAvailable for all items owned by player or enemy based on their cooldown: they become usable only after cooldown seconds from start
   ['playerGrid','enemyGrid'].forEach(gname=>{
     const grid = state[gname];
@@ -352,13 +388,11 @@ function startBattle(){
   logEl.innerHTML='';
   const tick = ()=>{
     const now = performance.now();
-    const elapsed = (now - state.battle.startTime)/1000;
-    state.battle.elapsed = elapsed;
-    document.getElementById('battle-timer').textContent = elapsed.toFixed(1)+'s';
+    document.getElementById('battle-timer').textContent = '';
     // process activations
     processActivations(now);
     updateHPDisplays();
-    if(elapsed>=BATTLE_DURATION || state.playerHP<=0 || state.enemyHP<=0){
+    if(state.playerHP<=0 || state.enemyHP<=0){
       endBattle();
     }
   };
@@ -372,6 +406,54 @@ function endBattle(){
   state.battle = null;
   const winner = state.playerHP>state.enemyHP? 'Spieler' : (state.enemyHP>state.playerHP? 'Gegner' : 'Unentschieden');
   log(`Battle beendet — Sieger: ${winner}`);
+  // After round: handle rewards, drops, respawn enemy, refill shop
+  handleEndOfRound(winner);
+}
+
+function handleEndOfRound(winner){
+  // If player survived (winner === 'Spieler'), drop 1 item and award gold equal to HP difference
+  if(winner==='Spieler'){
+    const hpDiff = Math.max(0, Math.round(state.playerHP - state.enemyHP));
+    state.gold = (state.gold||0) + hpDiff;
+    log(`Spieler erhält ${hpDiff} Gold (HP-Differenz).`);
+    // drop one random item
+    const template = GameItems.ITEMS[Math.floor(Math.random()*GameItems.ITEMS.length)];
+    const drop = GameItems.createItemInstance(template.key,'player');
+    // try to place into player-inv, then player-storage, then global storage
+    if(!placeIntoFirstFree(state.playerGrid, PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, drop)){
+      if(!placeIntoFirstFree(state.playerStorageGrid, PLAYER_STORAGE_SLOTS.cols, PLAYER_STORAGE_SLOTS.rows, drop)){
+        placeIntoFirstFree(state.storageGrid, STORAGE_SLOTS.cols, STORAGE_SLOTS.rows, drop);
+      }
+    }
+    log(`Item gedroppt: ${drop.name}`);
+  }
+  // generate new enemy
+  generateNewEnemy();
+  // refill shop with 5 items
+  spawnShopItems();
+  renderAllGrids(); renderHUD(); saveGameState();
+}
+
+function generateNewEnemy(){
+  // reset enemy HP
+  state.enemyHP = 100;
+  // clear enemy grids
+  state.enemyGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
+  state.enemyStorageGrid = makeGridArray(ENEMY_STORAGE_SLOTS.cols, ENEMY_STORAGE_SLOTS.rows);
+  // fill enemy inventory with random 3 items
+  for(let k=0;k<3;k++){
+    const t = GameItems.ITEMS[Math.floor(Math.random()*GameItems.ITEMS.length)];
+    const inst = GameItems.createItemInstance(t.key,'enemy');
+    placeIntoFirstFree(state.enemyGrid, PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, inst);
+  }
+  // optionally fill enemy storage with 2-4 items
+  const sCount = 2 + Math.floor(Math.random()*3);
+  for(let k=0;k<sCount;k++){
+    const t = GameItems.ITEMS[Math.floor(Math.random()*GameItems.ITEMS.length)];
+    const inst = GameItems.createItemInstance(t.key,'enemy-storage');
+    placeIntoFirstFree(state.enemyStorageGrid, ENEMY_STORAGE_SLOTS.cols, ENEMY_STORAGE_SLOTS.rows, inst);
+  }
+  log('Neuer Gegner generiert.');
 }
 
 function processActivations(now){
@@ -400,12 +482,12 @@ function applyItemEffect(inst, owner, target){
   if(dmg>0){
     if(target==='enemy') state.enemyHP = Math.max(0, state.enemyHP - dmg);
     else state.playerHP = Math.max(0, state.playerHP - dmg);
-    log(`${owner} verwendet ${inst.name} und verursacht ${dmg} Schaden an ${target}`);
+    colorLog(`${owner} verwendet ${inst.name} und verursacht ${dmg} Schaden an ${target}`, owner);
   }
   if(heal>0){
     if(owner==='player') { state.playerHP = Math.min(100, state.playerHP + heal); }
     else { state.enemyHP = Math.min(100, state.enemyHP + heal); }
-    log(`${owner} verwendet ${inst.name} und heilt ${heal} HP`);
+    colorLog(`${owner} verwendet ${inst.name} und heilt ${heal} HP`, owner);
   }
 }
 
@@ -422,6 +504,18 @@ function log(text){
   const logEl = document.getElementById('battle-log');
   const entry = document.createElement('div');
   entry.className = 'entry';
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+  logEl.prepend(entry);
+}
+
+// colored log with type: 'player','enemy','info'
+function colorLog(text, type){
+  const logEl = document.getElementById('battle-log');
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+  if(type==='player') entry.style.color = '#b7f5c8';
+  else if(type==='enemy') entry.style.color = '#f5b7b7';
+  else entry.style.color = '#cfe7ff';
   entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
   logEl.prepend(entry);
 }
@@ -457,6 +551,8 @@ function saveGameState(){
       playerGrid: state.playerGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
       enemyGrid: state.enemyGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
       storageGrid: state.storageGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
+      playerStorageGrid: state.playerStorageGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
+      enemyStorageGrid: state.enemyStorageGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
       shopInstances: state.shopInstances.map(i=> ({id:i.id,key:i.key,owner:i.owner})),
       gold: state.gold || 0
     };
@@ -491,6 +587,8 @@ function loadGameState(){
     state.playerGrid = materialize(obj.playerGrid);
     state.enemyGrid = materialize(obj.enemyGrid);
     state.storageGrid = materialize(obj.storageGrid);
+    state.playerStorageGrid = materialize(obj.playerStorageGrid || []);
+    state.enemyStorageGrid = materialize(obj.enemyStorageGrid || []);
     state.shopInstances = (obj.shopInstances||[]).map(si => {
       const inst = GameItems.createItemInstance(si.key, si.owner);
       inst.id = si.id; return inst;
@@ -498,7 +596,7 @@ function loadGameState(){
     // currency
     state.gold = obj.gold || 200;
     // ensure next item id counter
-    const maxIdNum = [state.playerGrid, state.enemyGrid, state.storageGrid, state.shopInstances].flat().filter(Boolean).map(i=>{
+    const maxIdNum = [state.playerGrid, state.enemyGrid, state.storageGrid, state.playerStorageGrid, state.enemyStorageGrid, state.shopInstances].flat().filter(Boolean).map(i=>{
       const m = i.id && i.id.match(/itm-(\d+)/); return m? Number(m[1]) : 0;
     }).reduce((a,b)=> Math.max(a,b), 0);
     if(maxIdNum) GameItems.ensureNextItemId(maxIdNum+1);
