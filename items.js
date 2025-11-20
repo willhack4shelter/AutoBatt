@@ -13,6 +13,8 @@ const RARITIES = {
   legendary: {label:'Legendary', colorClass:'rarity-legendary'}
 };
 
+console.log('GameItems: templates loaded, count=', ITEMS.length);
+
 // Erzeuge programmgesteuert eine größere Items-Liste (50 Items), leicht anpassbar
 const ITEMS = [];
 const SHAPES = [[1,1],[1,2],[2,1],[2,2],[1,3],[3,1]];

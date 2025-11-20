@@ -5,6 +5,37 @@
    - Starteritems werden verteilt (3 je Spieler)
    - Battle läuft 12s, Items werden nach ihrem cooldown zum ersten Mal benutzt
 */
+console.log('script.js loaded');
+
+// create an on-page debug panel so the user can see logs without opening DevTools
+function createDebugPanel(){
+  if(document.getElementById('debug-panel')) return;
+  const pnl = document.createElement('div');
+  pnl.id = 'debug-panel';
+  pnl.style.position = 'fixed';
+  pnl.style.right = '12px';
+  pnl.style.bottom = '12px';
+  pnl.style.width = '340px';
+  pnl.style.maxHeight = '240px';
+  pnl.style.overflow = 'auto';
+  pnl.style.background = 'rgba(2,6,23,0.9)';
+  pnl.style.color = '#9fb6c9';
+  pnl.style.fontSize = '12px';
+  pnl.style.padding = '8px';
+  pnl.style.borderRadius = '8px';
+  pnl.style.zIndex = '9999';
+  pnl.innerHTML = '<strong>Debug</strong><div id="debug-lines" style="margin-top:6px"></div>';
+  document.body.appendChild(pnl);
+  // monkey-patch console
+  const origLog = console.log.bind(console);
+  const origErr = console.error.bind(console);
+  console.log = function(...args){
+    origLog(...args);
+    const d = document.getElementById('debug-lines'); if(d){ const ln = document.createElement('div'); ln.textContent = args.map(a=>String(a)).join(' '); d.prepend(ln); }
+  };
+  console.error = function(...args){ origErr(...args); const d = document.getElementById('debug-lines'); if(d){ const ln = document.createElement('div'); ln.style.color='salmon'; ln.textContent = '[ERR] '+args.map(a=>String(a)).join(' '); d.prepend(ln);} };
+}
+window.addEventListener('load', ()=>{ try{ createDebugPanel(); }catch(e){console.error('Debug panel init failed', e);} });
 
 const PLAYER_SLOTS = {cols:6, rows:3};
 const STORAGE_SLOTS = {cols:8, rows:2};
@@ -27,6 +58,7 @@ function makeGridArray(cols, rows){
 }
 
 function init(){
+  console.log('AutoBatt:init starting');
   state.playerGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.enemyGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.storageGrid = makeGridArray(STORAGE_SLOTS.cols, STORAGE_SLOTS.rows);
@@ -42,6 +74,7 @@ function init(){
 
   updateHPDisplays();
   document.getElementById('start-battle').addEventListener('click', ()=>startBattle());
+  console.log('AutoBatt:init attached start-battle listener');
   const btn = document.getElementById('btn-reset');
   if(btn) btn.addEventListener('click', ()=>{
     if(confirm('Speicher zurücksetzen und neu laden?')){
@@ -50,6 +83,7 @@ function init(){
     }
   });
   renderHUD();
+  console.log('AutoBatt:init done');
 }
 
 function buildGrid(containerId, cols, rows, gridArray, owner){
@@ -387,7 +421,23 @@ function log(text){
 
 // on load
 window.addEventListener('DOMContentLoaded', ()=>{
-  init();
+  try{
+    init();
+  }catch(e){
+    console.error('Init failed', e);
+    const logEl = document.getElementById && document.getElementById('battle-log');
+    if(logEl) logEl.prepend(document.createElement('div')).textContent = 'Init error: '+e.message;
+    throw e;
+  }
+});
+
+// global error handler to surface runtime errors into the battle log
+window.addEventListener('error', (ev)=>{
+  console.error('Global error', ev.error || ev.message);
+  const logEl = document.getElementById && document.getElementById('battle-log');
+  if(logEl){
+    const d = document.createElement('div'); d.className='entry'; d.textContent = `[Error] ${ev.message || ev.error}`; logEl.prepend(d);
+  }
 });
 
 /* Persistence: save/load to localStorage */
