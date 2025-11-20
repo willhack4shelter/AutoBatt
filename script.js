@@ -14,6 +14,7 @@ let state = {
   playerHP:100, enemyHP:100,
   playerGrid:[], enemyGrid:[], storageGrid:[],
   shopInstances:[], // item instances available in shop
+  gold:200,
   battle: null
 };
 
@@ -41,6 +42,14 @@ function init(){
 
   updateHPDisplays();
   document.getElementById('start-battle').addEventListener('click', ()=>startBattle());
+  const btn = document.getElementById('btn-reset');
+  if(btn) btn.addEventListener('click', ()=>{
+    if(confirm('Speicher zurücksetzen und neu laden?')){
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+  });
+  renderHUD();
 }
 
 function buildGrid(containerId, cols, rows, gridArray, owner){
@@ -71,8 +80,31 @@ function buildShop(){
     });
   }
   state.shopInstances.forEach(inst=>{
-    shop.appendChild(renderShopItem(inst));
+    const el = renderShopItem(inst);
+    // add click-to-buy handler
+    el.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      buyFromShop(inst);
+    });
+    shop.appendChild(el);
   });
+}
+
+function buyFromShop(inst){
+  state.gold = state.gold || 200;
+  if(state.gold < inst.price){ log(`Nicht genug Gold für ${inst.name} (Preis ${inst.price})`); return; }
+  // try to place into player inventory first
+  const clone = GameItems.createItemInstance(inst.key,'player');
+  const placed = placeIntoFirstFree(state.playerGrid, PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, clone);
+  if(!placed){
+    // try storage
+    const placed2 = placeIntoFirstFree(state.storageGrid, STORAGE_SLOTS.cols, STORAGE_SLOTS.rows, clone);
+    if(!placed2){ log('Kein Platz im Inventar oder Storage, Kauf abgebrochen.'); return; }
+  }
+  state.gold -= inst.price;
+  log(`Gekauft: ${inst.name} für ${inst.price} Gold.`);
+  saveGameState();
+  renderAllGrids(); renderHUD();
 }
 
 function renderShopItem(item){
@@ -212,8 +244,10 @@ function renderGrid(containerId, gridArray, cols){
     el.className = `item grid-item ${GameItems.RARITIES[inst.rarity].colorClass}`;
     el.dataset.itemId = inst.id;
     el.draggable = true;
-    el.style.left = `${c*(40+6)}px`;
-    el.style.top = `${r*(40+6)}px`;
+    // account for grid padding (6px) and gap (6px)
+    const pad = 6; const gap = 6; const cell = 40;
+    el.style.left = `${pad + c*(cell+gap)}px`;
+    el.style.top = `${pad + r*(cell+gap)}px`;
     el.style.width = `${inst.shape[0]*40 + (inst.shape[0]-1)*6}px`;
     el.style.height = `${inst.shape[1]*40 + (inst.shape[1]-1)*6}px`;
     el.innerHTML = `<div>${inst.name}</div><small>${inst.damage?('D:'+inst.damage):''}${inst.heal?(' H:'+inst.heal):''}</small>`;
@@ -377,6 +411,12 @@ function loadGameState(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return false;
     const obj = JSON.parse(raw);
+    // basic validation of saved grids length
+    const expectedPlayerLen = PLAYER_SLOTS.cols * PLAYER_SLOTS.rows;
+    const expectedStorageLen = STORAGE_SLOTS.cols * STORAGE_SLOTS.rows;
+    if(!obj.playerGrid || !obj.enemyGrid || !obj.storageGrid) return false;
+    if(obj.playerGrid.length !== expectedPlayerLen || obj.enemyGrid.length !== expectedPlayerLen || obj.storageGrid.length !== expectedStorageLen) return false;
+
     state.playerHP = obj.playerHP||100;
     state.enemyHP = obj.enemyHP||100;
     // helper to materialize instances
@@ -390,19 +430,28 @@ function loadGameState(){
         return inst;
       });
     }
-    state.playerGrid = materialize(obj.playerGrid || []);
-    state.enemyGrid = materialize(obj.enemyGrid || []);
-    state.storageGrid = materialize(obj.storageGrid || []);
+    state.playerGrid = materialize(obj.playerGrid);
+    state.enemyGrid = materialize(obj.enemyGrid);
+    state.storageGrid = materialize(obj.storageGrid);
     state.shopInstances = (obj.shopInstances||[]).map(si => {
       const inst = GameItems.createItemInstance(si.key, si.owner);
       inst.id = si.id; return inst;
     });
+    // currency
+    state.gold = obj.gold || 200;
     // ensure next item id counter
     const maxIdNum = [state.playerGrid, state.enemyGrid, state.storageGrid, state.shopInstances].flat().filter(Boolean).map(i=>{
       const m = i.id && i.id.match(/itm-(\d+)/); return m? Number(m[1]) : 0;
     }).reduce((a,b)=> Math.max(a,b), 0);
     if(maxIdNum) GameItems.ensureNextItemId(maxIdNum+1);
     renderAllGrids();
+    renderHUD();
     return true;
   }catch(e){ console.warn('Load failed',e); return false; }
+}
+
+/* HUD: render gold and controls */
+function renderHUD(){
+  const el = document.getElementById('gold-amount');
+  if(el) el.textContent = (state.gold||0).toString();
 }
