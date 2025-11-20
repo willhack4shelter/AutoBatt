@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AutoBatt — Backpack-style Idle Game</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>AutoBatt — Backpack Battles (Demo)</h1>
+  </header>
+
+  <main>
+    <section class="players">
+      <div class="player" id="player">
+        <h2>Spieler</h2>
+        <div class="hp">
+          <div class="hp-label">HP</div>
+          <div class="hp-bar"><div class="hp-fill" id="player-hp-fill"></div></div>
+          <div class="hp-text" id="player-hp-text">100 / 100</div>
+        </div>
+        <div class="grid-label">Inventar</div>
+        <div class="grid" id="player-inv"></div>
+      </div>
+
+      <div class="arena">
+        <div class="controls">
+          <button id="start-battle">Starte Battle (12s)</button>
+          <div id="battle-timer">0.0s</div>
+        </div>
+        <div class="log" id="battle-log"></div>
+      </div>
+
+      <div class="player" id="enemy">
+        <h2>Gegner</h2>
+        <div class="hp">
+          <div class="hp-label">HP</div>
+          <div class="hp-bar"><div class="hp-fill" id="enemy-hp-fill"></div></div>
+          <div class="hp-text" id="enemy-hp-text">100 / 100</div>
+        </div>
+        <div class="grid-label">Inventar</div>
+        <div class="grid" id="enemy-inv"></div>
+      </div>
+    </section>
+
+    <section class="shop-area">
+      <div class="shop">
+        <h3>Shop</h3>
+        <div id="shop-items" class="shop-items"></div>
+      </div>
+      <div class="storage">
+        <h3>Storage</h3>
+        <div class="grid" id="storage-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="items.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

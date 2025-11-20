@@ -1,0 +1,41 @@
+:root{
+  --bg:#0f1724; --panel:#0b1220; --accent:#56b6ff; --muted:#9aa7b2; --good:#4ade80; --bad:#fb7185;
+}
+*{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+html,body{height:100%;margin:0;background:linear-gradient(180deg,#071023 0%, #0f1724 100%);color:#e6eef6}
+header{padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.03)}
+h1{margin:0;font-size:18px}
+main{padding:16px;display:flex;flex-direction:column;gap:14px}
+.players{display:flex;gap:16px;align-items:flex-start}
+.player{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;width:280px}
+.arena{flex:1;background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;display:flex;flex-direction:column}
+.hp{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hp-bar{flex:1;height:12px;background:rgba(255,255,255,0.06);border-radius:6px;overflow:hidden}
+.hp-fill{height:100%;background:linear-gradient(90deg,var(--good),#06b6d4);width:100%}
+.hp-text{min-width:70px;text-align:right;font-size:12px;color:var(--muted)}
+.grid-label{font-size:13px;color:var(--muted);margin-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(6,40px);grid-auto-rows:40px;gap:6px;background:rgba(255,255,255,0.01);padding:6px;border-radius:6px}
+.grid .slot{background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.03);border-radius:4px;position:relative}
+.grid .slot.highlight{outline:2px solid rgba(86,182,255,0.45)}
+.item{position:absolute;border-radius:6px;padding:6px;color:#031124;font-weight:600;cursor:grab;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.item small{font-weight:500;font-size:11px;color:rgba(0,0,0,0.6)}
+.shop-area{display:flex;gap:12px}
+.shop,.storage{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px}
+.shop-items{display:flex;gap:8px;flex-wrap:wrap}
+.controls{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+#start-battle{background:var(--accent);border:none;color:#012138;padding:8px 12px;border-radius:6px;cursor:pointer}
+.log{background:rgba(0,0,0,0.15);height:300px;overflow:auto;padding:8px;border-radius:6px;color:var(--muted);font-size:13px}
+.log .entry{margin-bottom:6px}
+.rarity-common{background:#d1d5db}
+.rarity-rare{background:#60a5fa}
+.rarity-epic{background:#a78bfa}
+.rarity-legendary{background:#f59e0b}
+.storage .grid{grid-template-columns:repeat(8,40px)}
+
+/* make items show with size matching their width/height */
+.item.dragging{opacity:0.7}
+
+@media (max-width:900px){
+  .players{flex-direction:column}
+  .player{width:100%}
+}
