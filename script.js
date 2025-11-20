@@ -195,6 +195,11 @@ function onDragLeave(ev){
   clearHighlights();
 }
 
+// alias kept for older event name usage
+function onDragLeaveSlot(ev){
+  return onDragLeave(ev);
+}
+
 function onDropOnSlot(ev){
   ev.preventDefault();
   clearHighlights();
