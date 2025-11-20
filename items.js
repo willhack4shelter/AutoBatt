@@ -13,7 +13,6 @@ const RARITIES = {
   legendary: {label:'Legendary', colorClass:'rarity-legendary'}
 };
 
-console.log('GameItems: templates loaded, count=', ITEMS.length);
 
 // Erzeuge programmgesteuert eine größere Items-Liste (50 Items), leicht anpassbar
 const ITEMS = [];
@@ -38,6 +37,8 @@ function addTemplate(i){
 }
 
 for(let i=1;i<=50;i++) addTemplate(i);
+
+console.log('GameItems: templates generated, count=', 50);
 
 let _nextItemId = 1;
 function createItemInstance(templateKey, owner){

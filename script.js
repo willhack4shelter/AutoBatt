@@ -301,7 +301,9 @@ function renderShopInstances(){
   // remove all remaining shop DOM items (they were the originals); regenerate
   shop.innerHTML = '';
   state.shopInstances.forEach(inst=>{
-    shop.appendChild(renderShopItem(inst));
+    const el = renderShopItem(inst);
+    el.addEventListener('click', (ev)=>{ ev.stopPropagation(); buyFromShop(inst); });
+    shop.appendChild(el);
   });
 }
 
@@ -431,7 +433,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   }catch(e){
     console.error('Init failed', e);
     const logEl = document.getElementById && document.getElementById('battle-log');
-    if(logEl) logEl.prepend(document.createElement('div')).textContent = 'Init error: '+e.message;
+    if(logEl){ const n = document.createElement('div'); n.className='entry'; n.textContent = 'Init error: '+e.message; logEl.prepend(n); }
     throw e;
   }
 });
@@ -455,7 +457,8 @@ function saveGameState(){
       playerGrid: state.playerGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
       enemyGrid: state.enemyGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
       storageGrid: state.storageGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
-      shopInstances: state.shopInstances.map(i=> ({id:i.id,key:i.key,owner:i.owner}))
+      shopInstances: state.shopInstances.map(i=> ({id:i.id,key:i.key,owner:i.owner})),
+      gold: state.gold || 0
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
   }catch(e){ console.warn('Save failed',e); }
