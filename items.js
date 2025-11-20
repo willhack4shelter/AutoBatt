@@ -13,15 +13,29 @@ const RARITIES = {
   legendary: {label:'Legendary', colorClass:'rarity-legendary'}
 };
 
-// Beispiel-Items — du kannst diese Liste direkt editieren
-const ITEMS = [
-  {key:'rock', name:'Stein', shape:[1,1], damage:6, heal:0, price:5, cooldown:2.5, dropChance:0.5, rarity:'common'},
-  {key:'bandage', name:'Bandage', shape:[1,1], damage:0, heal:8, price:8, cooldown:3.0, dropChance:0.45, rarity:'common'},
-  {key:'sword', name:'Kurzschwert', shape:[1,2], damage:16, heal:0, price:30, cooldown:5.5, dropChance:0.18, rarity:'rare'},
-  {key:'medkit', name:'MedKit', shape:[2,1], damage:0, heal:28, price:70, cooldown:8.0, dropChance:0.08, rarity:'rare'},
-  {key:'rifle', name:'Gewehr', shape:[1,3], damage:40, heal:0, price:160, cooldown:10.5, dropChance:0.03, rarity:'epic'},
-  {key:'orb', name:'Heiliges Orb', shape:[2,2], damage:0, heal:60, price:420, cooldown:11.0, dropChance:0.01, rarity:'legendary'}
-];
+// Erzeuge programmgesteuert eine größere Items-Liste (50 Items), leicht anpassbar
+const ITEMS = [];
+const SHAPES = [[1,1],[1,2],[2,1],[2,2],[1,3],[3,1]];
+// rarity distribution: more commons, few rares/epics/legendary
+const RARITY_ORDER = ['common','common','common','common','common','common','rare','rare','rare','epic','epic','legendary'];
+
+function addTemplate(i){
+  const rarity = RARITY_ORDER[Math.floor(Math.random()*RARITY_ORDER.length)];
+  const shape = SHAPES[i % SHAPES.length];
+  // scale stats by index and rarity
+  const base = 4 + Math.floor(i*1.6);
+  const rarityScale = ({common:1, rare:1.6, epic:2.5, legendary:4})[rarity]||1;
+  const damage = Math.round(base * rarityScale);
+  const heal = (i%5===0)? Math.round((base/1.2)*rarityScale) : 0;
+  const cooldown = Math.max(0.5, Math.min(11.5, (1 + (50-i)/10 + (rarity==='legendary'?4:0))));
+  const price = Math.round((10 + i*8) * rarityScale);
+  const dropChance = Math.max(0.01, Math.min(0.7, 0.6 / rarityScale * (1 - i/120)));
+  const key = `itm_${i}`;
+  const name = `${rarity.charAt(0).toUpperCase()+rarity.slice(1)} Item ${i}`;
+  ITEMS.push({key,name,shape:[shape[0],shape[1]],damage,heal,price,cooldown:Number(cooldown.toFixed(2)),dropChance:Number(dropChance.toFixed(3)),rarity});
+}
+
+for(let i=1;i<=50;i++) addTemplate(i);
 
 let _nextItemId = 1;
 function createItemInstance(templateKey, owner){
@@ -34,5 +48,7 @@ function createItemInstance(templateKey, owner){
   };
 }
 
+function ensureNextItemId(n){ if(typeof n==='number' && n>_nextItemId) _nextItemId = n; }
+
 // expose for script
-window.GameItems = {ITEMS, RARITIES, createItemInstance};
+window.GameItems = {ITEMS, RARITIES, createItemInstance, ensureNextItemId};

@@ -29,12 +29,16 @@ function init(){
   state.playerGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.enemyGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.storageGrid = makeGridArray(STORAGE_SLOTS.cols, STORAGE_SLOTS.rows);
-
   buildGrid('player-inv', PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, state.playerGrid, 'player');
   buildGrid('enemy-inv', PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, state.enemyGrid, 'enemy');
   buildGrid('storage-grid', STORAGE_SLOTS.cols, STORAGE_SLOTS.rows, state.storageGrid, 'storage');
-  buildShop();
-  assignStarterItems();
+
+  // try to load saved state; if none, build defaults
+  if(!loadGameState()){
+    buildShop();
+    assignStarterItems();
+  }
+
   updateHPDisplays();
   document.getElementById('start-battle').addEventListener('click', ()=>startBattle());
 }
@@ -59,11 +63,15 @@ function buildShop(){
   const shop = document.getElementById('shop-items');
   shop.innerHTML='';
   // create instances for shop (one of each template)
-  GameItems.ITEMS.forEach(t => {
-    const inst = GameItems.createItemInstance(t.key,'shop');
-    state.shopInstances.push(inst);
-    const el = renderShopItem(inst);
-    shop.appendChild(el);
+  if(!state.shopInstances || state.shopInstances.length===0){
+    state.shopInstances = [];
+    GameItems.ITEMS.forEach(t => {
+      const inst = GameItems.createItemInstance(t.key,'shop');
+      state.shopInstances.push(inst);
+    });
+  }
+  state.shopInstances.forEach(inst=>{
+    shop.appendChild(renderShopItem(inst));
   });
 }
 
@@ -144,6 +152,7 @@ function onDropOnSlot(ev){
   // set owner
   dragging.owner = owner;
   renderAllGrids();
+  saveGameState();
 }
 
 function removeInstanceFromAll(id){
@@ -200,7 +209,7 @@ function renderGrid(containerId, gridArray, cols){
     const idx = i; // first occurrence in the grid is top-left by how we place
     const c = idx % cols, r = Math.floor(idx/cols);
     const el = document.createElement('div');
-    el.className = `item ${GameItems.RARITIES[inst.rarity].colorClass}`;
+    el.className = `item grid-item ${GameItems.RARITIES[inst.rarity].colorClass}`;
     el.dataset.itemId = inst.id;
     el.draggable = true;
     el.style.left = `${c*(40+6)}px`;
@@ -233,6 +242,7 @@ function assignStarterItems(){
     placeIntoFirstFree(state.enemyGrid, PLAYER_SLOTS.cols, PLAYER_SLOTS.rows, ei);
   }
   renderAllGrids();
+  saveGameState();
 }
 
 function placeIntoFirstFree(grid, cols, rows, inst){
@@ -345,3 +355,54 @@ function log(text){
 window.addEventListener('DOMContentLoaded', ()=>{
   init();
 });
+
+/* Persistence: save/load to localStorage */
+const STORAGE_KEY = 'autobatt_state_v1';
+function saveGameState(){
+  try{
+    const save = {
+      playerHP: state.playerHP,
+      enemyHP: state.enemyHP,
+      playerGrid: state.playerGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
+      enemyGrid: state.enemyGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
+      storageGrid: state.storageGrid.map(i=> i ? {id:i.id,key:i.key,owner:i.owner, nextAvailable:i.nextAvailable,shape:i.shape} : null),
+      shopInstances: state.shopInstances.map(i=> ({id:i.id,key:i.key,owner:i.owner}))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+  }catch(e){ console.warn('Save failed',e); }
+}
+
+function loadGameState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const obj = JSON.parse(raw);
+    state.playerHP = obj.playerHP||100;
+    state.enemyHP = obj.enemyHP||100;
+    // helper to materialize instances
+    function materialize(arr){
+      return arr.map(cell => {
+        if(!cell) return null;
+        const inst = GameItems.createItemInstance(cell.key, cell.owner);
+        // ensure id continuity
+        inst.id = cell.id;
+        inst.nextAvailable = cell.nextAvailable || null;
+        return inst;
+      });
+    }
+    state.playerGrid = materialize(obj.playerGrid || []);
+    state.enemyGrid = materialize(obj.enemyGrid || []);
+    state.storageGrid = materialize(obj.storageGrid || []);
+    state.shopInstances = (obj.shopInstances||[]).map(si => {
+      const inst = GameItems.createItemInstance(si.key, si.owner);
+      inst.id = si.id; return inst;
+    });
+    // ensure next item id counter
+    const maxIdNum = [state.playerGrid, state.enemyGrid, state.storageGrid, state.shopInstances].flat().filter(Boolean).map(i=>{
+      const m = i.id && i.id.match(/itm-(\d+)/); return m? Number(m[1]) : 0;
+    }).reduce((a,b)=> Math.max(a,b), 0);
+    if(maxIdNum) GameItems.ensureNextItemId(maxIdNum+1);
+    renderAllGrids();
+    return true;
+  }catch(e){ console.warn('Load failed',e); return false; }
+}
