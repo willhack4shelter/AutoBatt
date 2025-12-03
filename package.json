@@ -1,0 +1,14 @@
+{
+  "name": "autobatt",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0",
+    "eslint-config-prettier": "^8.0.0"
+  },
+  "scripts": {
+    "lint": "eslint . --ext .js",
+    "format": "prettier --write '**/*.js' '**/*.css' '**/*.html'"
+  }
+}

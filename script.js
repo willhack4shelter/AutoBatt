@@ -174,6 +174,12 @@ function renderShopItem(item){
   el.innerHTML = `<div>${item.name}</div><small>${item.damage?('Dmg:'+item.damage):''}${item.heal?(' Heal:'+item.heal):''} CD:${item.cooldown}s</small>`;
   el.addEventListener('dragstart', (ev)=>onDragStart(ev,item,el));
   el.addEventListener('dragend', onDragEnd);
+  // tooltip (uses bridge-provided global `showTooltip`/`hideTooltip` if available)
+  el.addEventListener('mouseenter', (ev)=>{
+    try{ if(window.showTooltip) window.showTooltip(`<strong>${item.name}</strong><br>Dmg: ${item.damage||0} Heal: ${item.heal||0}<br>CD: ${item.cooldown}s<br>Price: ${item.price}<br>Rarity: ${item.rarity}`, ev.clientX, ev.clientY); }catch(e){}
+  });
+  el.addEventListener('mousemove', (ev)=>{ try{ if(window.showTooltip) window.showTooltip(null, ev.clientX, ev.clientY); }catch(e){} });
+  el.addEventListener('mouseleave', ()=>{ try{ if(window.hideTooltip) window.hideTooltip(); }catch(e){} });
   return el;
 }
 
@@ -324,8 +330,12 @@ function renderGrid(containerId, gridArray, cols){
     el.innerHTML = `<div>${inst.name}</div><small>${inst.damage?('D:'+inst.damage):''}${inst.heal?(' H:'+inst.heal):''}</small>`;
     if(!isEnemy) el.addEventListener('dragstart', (ev)=>onDragStart(ev,inst,el));
     el.addEventListener('dragend', onDragEnd);
-    // add tooltip on hover
-    el.title = `Dmg:${inst.damage || 0} Heal:${inst.heal || 0} CD:${inst.cooldown}s Price:${inst.price} Rarity:${inst.rarity}`;
+    // tooltip handlers instead of title (more flexible)
+    el.addEventListener('mouseenter', (ev)=>{
+      try{ if(window.showTooltip) window.showTooltip(`<strong>${inst.name}</strong><br>Dmg: ${inst.damage||0} Heal: ${inst.heal||0}<br>CD: ${inst.cooldown}s<br>Price: ${inst.price}<br>Rarity: ${inst.rarity}`, ev.clientX, ev.clientY); }catch(e){}
+    });
+    el.addEventListener('mousemove', (ev)=>{ try{ if(window.showTooltip) window.showTooltip(null, ev.clientX, ev.clientY); }catch(e){} });
+    el.addEventListener('mouseleave', ()=>{ try{ if(window.hideTooltip) window.hideTooltip(); }catch(e){} });
     // right-click to sell for player's items
     const isPlayerItem = (inst.owner==='player' || inst.owner==='player-storage');
     if(isPlayerItem){
