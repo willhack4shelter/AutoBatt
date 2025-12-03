@@ -50,8 +50,6 @@ function addTemplate(i){
 
 for(let i=1;i<=50;i++) addTemplate(i);
 
-console.log('GameItems: templates generated, count=', 50);
-
 let _nextItemId = 1;
 function createItemInstance(templateKey, owner){
   const t = ITEMS.find(it => it.key===templateKey);

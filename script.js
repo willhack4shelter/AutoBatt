@@ -5,9 +5,10 @@
    - Starteritems werden verteilt (3 je Spieler)
    - Battle läuft 12s, Items werden nach ihrem cooldown zum ersten Mal benutzt
 */
-console.log('script.js loaded');
-
-// create an on-page debug panel so the user can see logs without opening DevTools
+// Encapsulate script in IIFE and enable strict mode
+(function(){
+  'use strict';
+  // non-intrusive debug panel and helper
 function createDebugPanel(){
   if(document.getElementById('debug-panel')) return;
   const pnl = document.createElement('div');
@@ -26,16 +27,22 @@ function createDebugPanel(){
   pnl.style.zIndex = '9999';
   pnl.innerHTML = '<strong>Debug</strong><div id="debug-lines" style="margin-top:6px"></div>';
   document.body.appendChild(pnl);
-  // monkey-patch console
-  const origLog = console.log.bind(console);
-  const origErr = console.error.bind(console);
-  console.log = function(...args){
-    origLog(...args);
-    const d = document.getElementById('debug-lines'); if(d){ const ln = document.createElement('div'); ln.textContent = args.map(a=>String(a)).join(' '); d.prepend(ln); }
-  };
-  console.error = function(...args){ origErr(...args); const d = document.getElementById('debug-lines'); if(d){ const ln = document.createElement('div'); ln.style.color='salmon'; ln.textContent = '[ERR] '+args.map(a=>String(a)).join(' '); d.prepend(ln);} };
 }
-window.addEventListener('load', ()=>{ try{ createDebugPanel(); }catch(e){console.error('Debug panel init failed', e);} });
+
+function logDebug(...args){
+  // always write to console
+  console.log(...args);
+  const d = document.getElementById('debug-lines');
+  if(d){ const ln = document.createElement('div'); ln.textContent = args.map(a=>String(a)).join(' '); d.prepend(ln); }
+}
+
+// create debug panel only when ?debug=1 in URL
+window.addEventListener('load', ()=>{
+  try{
+    const params = new URLSearchParams(location.search);
+    if(params.get('debug')==='1') createDebugPanel();
+  }catch(e){ console.error('Debug panel init failed', e); }
+});
 
 const PLAYER_SLOTS = {cols:6, rows:3};
 const STORAGE_SLOTS = {cols:10, rows:4};
@@ -60,7 +67,7 @@ function makeGridArray(cols, rows){
 }
 
 function init(){
-  console.log('AutoBatt:init starting');
+  logDebug('AutoBatt:init starting');
   state.playerGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.enemyGrid = makeGridArray(PLAYER_SLOTS.cols, PLAYER_SLOTS.rows);
   state.storageGrid = makeGridArray(STORAGE_SLOTS.cols, STORAGE_SLOTS.rows);
@@ -80,7 +87,7 @@ function init(){
 
   updateHPDisplays();
   document.getElementById('start-battle').addEventListener('click', ()=>startBattle());
-  console.log('AutoBatt:init attached start-battle listener');
+  logDebug('AutoBatt:init attached start-battle listener');
   const btn = document.getElementById('btn-reset');
   if(btn) btn.addEventListener('click', ()=>{
     if(confirm('Speicher zurücksetzen und neu laden?')){
@@ -89,7 +96,7 @@ function init(){
     }
   });
   renderHUD();
-  console.log('AutoBatt:init done');
+  logDebug('AutoBatt:init done');
 }
 
 function buildGrid(containerId, cols, rows, gridArray, owner){
@@ -611,3 +618,6 @@ function renderHUD(){
   const el = document.getElementById('gold-amount');
   if(el) el.textContent = (state.gold||0).toString();
 }
+
+  // end IIFE wrapper
+})();
