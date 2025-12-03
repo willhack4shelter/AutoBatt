@@ -50,7 +50,9 @@ const PLAYER_STORAGE_SLOTS = {cols:6, rows:6};
 const ENEMY_STORAGE_SLOTS = {cols:6, rows:6};
 const BATTLE_DURATION = 12.0; // Sekunden
 
-let state = {
+// Prefer the shared store state if the bridge module exposed it on `window`.
+// This keeps legacy `script.js` in sync with `src/store.js` when present.
+let state = (window && window.state) ? window.state : {
   playerHP:100, enemyHP:100,
   playerGrid:[], enemyGrid:[], storageGrid:[],
   shopInstances:[], // item instances available in shop
@@ -390,9 +392,13 @@ function placeIntoFirstFree(grid, cols, rows, inst){
 }
 
 function startBattle(){
+  // Prefer the modular engine when available.
+  if(window && window.GameEngine && typeof window.GameEngine.startBattle === 'function'){
+    return window.GameEngine.startBattle();
+  }
+  // Fallback to legacy in-script engine if bridge/module not present
   if(state.battle) return; // already running
   state.battle = { tickTimer: null };
-  // set nextAvailable for all items owned by player or enemy based on their cooldown: they become usable only after cooldown seconds from start
   ['playerGrid','enemyGrid'].forEach(gname=>{
     const grid = state[gname];
     const unique = new Set();
@@ -413,17 +419,19 @@ function startBattle(){
       endBattle();
     }
   };
-  // run ticks every 100ms
   state.battle.tickTimer = setInterval(tick,100);
 }
 
 function endBattle(){
+  // Prefer modular engine when available
+  if(window && window.GameEngine && typeof window.GameEngine.endBattle === 'function'){
+    return window.GameEngine.endBattle();
+  }
   if(!state.battle) return;
   clearInterval(state.battle.tickTimer);
   state.battle = null;
   const winner = state.playerHP>state.enemyHP? 'Spieler' : (state.enemyHP>state.playerHP? 'Gegner' : 'Unentschieden');
   log(`Battle beendet — Sieger: ${winner}`);
-  // After round: handle rewards, drops, respawn enemy, refill shop
   handleEndOfRound(winner);
 }
 
