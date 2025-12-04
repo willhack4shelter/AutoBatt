@@ -34,11 +34,3 @@ Reset / Persistenz:
 Wichtige Hinweise:
 - Items definieren / anpassen: `items.js` — die `ITEMS`-Liste wurde programmgesteuert auf 50 Items erweitert.
 - Die Demo speichert Inventar/Shop/Storage automatisch im `localStorage` deines Browsers.
-
-GitHub Pages
-1. Erstelle ein Repository auf GitHub und pushe dieses Projekt.
-2. Aktiviere in den Repository-Einstellungen unter "Pages" die Branch `main` als Quelle und wähle `/ (root)`.
-3. Nach kurzer Wartezeit ist die Demo unter `https://<user>.github.io/<repo>/index.html` erreichbar.
-
-Weiteres:
-- Wenn du möchtest, kann ich Persistenz verfeinern, Kauf-/Währungssystem hinzufügen, Item-Drops implementieren oder GitHub Actions für automatisches Deployment erstellen.
