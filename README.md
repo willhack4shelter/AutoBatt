@@ -1,28 +1,8 @@
-# AutoBatt — Backpack-style Idle Game (Demo)
-
-Dieses Repository enthält eine kleine Demo eines Idle-Browsergames inspiriert von "Backpack Battles".
-
-Features:
-- Inventar als Grid (6x3) mit Items unterschiedlicher Formen (1x1, 1x2, 2x2, ...)
-- Shop und Storage; Drag & Drop mit Vorschau (Highlight der benötigten Felder)
-- Starteritems: Spieler und Gegner bekommen zu Beginn 3 Items
-- Battles laufen automatisch 12 Sekunden; Items werden erst nach ihrem Cooldown erstmalig aktiviert
-- Items haben Attribute: `damage`, `heal`, `price`, `cooldown`, `dropChance`, `rarity`
-- Lebensbalken über Spielern, Live-Update
-- Battlelog zeigt Ereignisse übersichtlich
-
-Schnellstart (lokal):
-
-1. Öffne `index.html` in einem Browser (lokal) oder starte einen einfachen Static-Server:
-
-```bash
-python3 -m http.server 8000
-# dann im Browser: http://localhost:8000/index.html
-```
+# AutoBatt
 
 2. Ziehe Items aus dem Shop ins Inventar oder in die Storage-Box.
 
-3. Drücke "Starte Battle" — der Kampf läuft 12 Sekunden.
+3. Drücke "Starte Battle"
 
 Kaufen aus dem Shop:
 - Klicke ein Shop-Item, um es zu kaufen (du startest mit 200 Gold). Das Item wird zuerst ins Inventar, bei Platzmangel in die Storage-Box gelegt.
