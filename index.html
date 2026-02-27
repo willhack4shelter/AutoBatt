@@ -1,68 +1,87 @@
 <!doctype html>
 <html lang="de">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AutoBatt — Idle Game</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header>
-    <h1>AutoBatt — Idle Game (Demo 0)</h1>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AutoBatt — Swiss Arena</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>AutoBatt</h1>
+      <div class="topbar-meta">
+        <span class="muted">Backpack-style Autobattler</span>
+        <button id="btn-reset" class="btn btn-ghost">Reset</button>
+      </div>
+    </header>
 
-  <main>
-    <section class="players">
-      <div class="player" id="player">
-        <h2>Spieler</h2>
-        <div class="hud">Geld: <strong id="gold-amount">200</strong> <button id="btn-reset">Reset</button></div>
-        <div class="hp">
+    <main class="layout">
+      <section class="panel player-panel">
+        <div class="panel-head">
+          <h2>Spieler</h2>
+          <div class="money">Gold: <strong id="gold-amount">200</strong></div>
+        </div>
+        <div class="hp-block">
           <div class="hp-label">HP</div>
           <div class="hp-bar"><div class="hp-fill" id="player-hp-fill"></div></div>
           <div class="hp-text" id="player-hp-text">100 / 100</div>
         </div>
-        <div class="grid-label">Inventar</div>
-        <div class="grid" id="player-inv"></div>
-        <div class="grid-label">Player Storage (6x6)</div>
-        <div class="grid" id="player-storage"></div>
-      </div>
 
-      <div class="arena">
-        <div class="controls">
-          <button id="start-battle">Starte Battle (12s)</button>
-          <div id="battle-timer">0.0s</div>
+        <h3>Inventar (6×3)</h3>
+        <div class="grid grid-player" id="player-inv"></div>
+
+        <h3>Rucksack (6×6)</h3>
+        <div class="grid grid-player-storage" id="player-storage"></div>
+      </section>
+
+      <section class="panel arena-panel">
+        <div class="arena-head">
+          <h2>Arena</h2>
+          <button id="start-battle" class="btn">Battle starten</button>
         </div>
+        <p class="muted arena-tip">Tipp: Items aus dem Shop per Drag & Drop ins Inventar ziehen.</p>
         <div class="log" id="battle-log"></div>
-      </div>
+      </section>
 
-      <div class="player" id="enemy">
-        <h2>Gegner</h2>
-        <div class="hp">
+      <section class="panel enemy-panel">
+        <div class="panel-head">
+          <h2>Gegner</h2>
+          <span class="muted">AI</span>
+        </div>
+        <div class="hp-block">
           <div class="hp-label">HP</div>
-          <div class="hp-bar"><div class="hp-fill" id="enemy-hp-fill"></div></div>
+          <div class="hp-bar"><div class="hp-fill enemy" id="enemy-hp-fill"></div></div>
           <div class="hp-text" id="enemy-hp-text">100 / 100</div>
         </div>
-        <div class="grid-label">Inventar (Locked)</div>
-        <div class="grid" id="enemy-inv"></div>
-        <div class="grid-label">Enemy Storage (6x6)</div>
-        <div class="grid" id="enemy-storage"></div>
-      </div>
-    </section>
 
-    <section class="shop-area">
-      <div class="shop">
-        <h3>Shop (5 items)</h3>
+        <h3>Inventar (6×3)</h3>
+        <div class="grid grid-enemy" id="enemy-inv"></div>
+
+        <h3>Rucksack (6×6)</h3>
+        <div class="grid grid-enemy-storage" id="enemy-storage"></div>
+      </section>
+    </main>
+
+    <section class="bottom-layout">
+      <section class="panel shop-panel">
+        <div class="panel-head">
+          <h2>Shop</h2>
+          <span class="muted">5 zufällige Items</span>
+        </div>
         <div id="shop-items" class="shop-items"></div>
-      </div>
-      <div class="storage">
-        <h3>Global Storage (10x4)</h3>
-        <div class="grid" id="storage-grid"></div>
-      </div>
-    </section>
-  </main>
+      </section>
 
-  <script src="items.js"></script>
-  <script type="module" src="src/bridge.mjs"></script>
-  <script src="script.js"></script>
-</body>
+      <section class="panel storage-panel">
+        <div class="panel-head">
+          <h2>Global Storage</h2>
+          <span class="muted">10×4</span>
+        </div>
+        <div class="grid grid-storage" id="storage-grid"></div>
+      </section>
+    </section>
+
+    <script src="items.js"></script>
+    <script type="module" src="src/ui.js"></script>
+    <script src="script.js"></script>
+  </body>
 </html>

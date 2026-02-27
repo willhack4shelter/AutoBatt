@@ -1,61 +1,33 @@
-/* UI helpers: debug panel, HUD rendering, tooltip handling */
-export function createDebugPanel(){
-  if(document.getElementById('debug-panel')) return;
-  const pnl = document.createElement('div');
-  pnl.id = 'debug-panel';
-  pnl.style.position = 'fixed';
-  pnl.style.right = '12px';
-  pnl.style.bottom = '12px';
-  pnl.style.width = '340px';
-  pnl.style.maxHeight = '240px';
-  pnl.style.overflow = 'auto';
-  pnl.style.background = 'rgba(2,6,23,0.9)';
-  pnl.style.color = '#9fb6c9';
-  pnl.style.fontSize = '12px';
-  pnl.style.padding = '8px';
-  pnl.style.borderRadius = '8px';
-  pnl.style.zIndex = '9999';
-  pnl.innerHTML = '<strong>Debug</strong><div id="debug-lines" style="margin-top:6px"></div>';
-  document.body.appendChild(pnl);
+/* Shared tooltip/UI helpers kept for merge compatibility with earlier module layout. */
+let tooltipEl = null;
+
+export function ensureTooltip() {
+  if (tooltipEl) return tooltipEl;
+  tooltipEl = document.createElement('div');
+  tooltipEl.id = 'item-tooltip';
+  tooltipEl.style.position = 'fixed';
+  tooltipEl.style.pointerEvents = 'none';
+  tooltipEl.style.zIndex = '9999';
+  tooltipEl.style.display = 'none';
+  document.body.appendChild(tooltipEl);
+  return tooltipEl;
 }
 
-export function logDebug(...args){
-  console.log(...args);
-  const d = document.getElementById('debug-lines');
-  if(d){ const ln = document.createElement('div'); ln.textContent = args.map(a=>String(a)).join(' '); d.prepend(ln); }
+export function showTooltip(html, x, y) {
+  const el = ensureTooltip();
+  if (typeof html === 'string') el.innerHTML = html;
+  el.style.left = `${x + 12}px`;
+  el.style.top = `${y + 12}px`;
+  el.style.display = 'block';
 }
 
-export function renderHUD(state){
-  const el = document.getElementById('gold-amount');
-  if(el) el.textContent = (state.gold||0).toString();
+export function hideTooltip() {
+  if (tooltipEl) tooltipEl.style.display = 'none';
 }
 
-// tooltip overlay
-let _tooltipEl = null;
-export function ensureTooltip(){
-  if(_tooltipEl) return _tooltipEl;
-  _tooltipEl = document.createElement('div');
-  _tooltipEl.id = 'item-tooltip';
-  _tooltipEl.style.position = 'fixed';
-  _tooltipEl.style.pointerEvents = 'none';
-  _tooltipEl.style.zIndex = '99999';
-  _tooltipEl.style.background = 'rgba(10,12,20,0.95)';
-  _tooltipEl.style.color = '#e6eef6';
-  _tooltipEl.style.padding = '8px';
-  _tooltipEl.style.borderRadius = '6px';
-  _tooltipEl.style.fontSize = '13px';
-  _tooltipEl.style.maxWidth = '280px';
-  _tooltipEl.style.display = 'none';
-  document.body.appendChild(_tooltipEl);
-  return _tooltipEl;
+// Optional global bridge so legacy scripts and merged branches can share behavior.
+if (typeof window !== 'undefined') {
+  if (!window.ensureTooltip) window.ensureTooltip = ensureTooltip;
+  if (!window.showTooltip) window.showTooltip = showTooltip;
+  if (!window.hideTooltip) window.hideTooltip = hideTooltip;
 }
-
-export function showTooltip(html, x, y){
-  const t = ensureTooltip();
-  if(typeof html === 'string') t.innerHTML = html;
-  t.style.left = (x+12)+'px';
-  t.style.top = (y+12)+'px';
-  t.style.display = 'block';
-}
-
-export function hideTooltip(){ if(_tooltipEl) _tooltipEl.style.display='none'; }
