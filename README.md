@@ -1,16 +1,30 @@
 # AutoBatt
 
-2. Ziehe Items aus dem Shop ins Inventar oder in die Storage-Box.
+Schlichter Browser-Autobattler im Stil von Backpack-Battles.
 
-3. Drücke "Starte Battle"
+## Features
+- Drag & Drop Inventar mit Item-Größen (6x3 + 6x6 Rucksack + 10x4 Global Storage)
+- Shop mit Gold-System
+- Auto-Battle mit Cooldowns, Schaden/Heal, Reward + Drop
+- Rechtsklick auf Spieler-Items verkauft zum halben Preis
+- Persistenz via `localStorage`
 
-Kaufen aus dem Shop:
-- Klicke ein Shop-Item, um es zu kaufen (du startest mit 200 Gold). Das Item wird zuerst ins Inventar, bei Platzmangel in die Storage-Box gelegt.
-- Wenn nicht genug Gold oder kein Platz vorhanden ist, erscheint eine Meldung im Battlelog.
+## Start
+Öffne einfach `index.html` im Browser oder starte lokal:
 
-Reset / Persistenz:
-- Die Demo speichert automatisch im `localStorage`. Drücke den `Reset`-Button um den Speicher zu löschen und neu zu laden.
+```bash
+python3 -m http.server 4173
+```
 
-Wichtige Hinweise:
-- Items definieren / anpassen: `items.js` — die `ITEMS`-Liste wurde programmgesteuert auf 50 Items erweitert.
-- Die Demo speichert Inventar/Shop/Storage automatisch im `localStorage` deines Browsers.
+Dann: `http://localhost:4173` öffnen.
+
+## Steuerung
+1. Item im Shop klicken (kaufen) oder per Drag ins Inventar ziehen.
+2. Items im Inventar/Rucksack sortieren.
+3. `Battle starten` klicken.
+4. Nach Runde: Gold/Drop einsammeln, Setup verbessern.
+
+## Entwicklung
+```bash
+npm run lint
+```
