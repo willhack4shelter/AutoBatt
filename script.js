@@ -73,6 +73,7 @@
 
   let tooltipEl = null;
   function ensureTooltip() {
+    if (window.ensureTooltip) return window.ensureTooltip();
     if (tooltipEl) return tooltipEl;
     tooltipEl = document.createElement('div');
     tooltipEl.id = 'item-tooltip';
@@ -85,14 +86,23 @@
   }
 
   function showTooltip(item, x, y) {
+    const html = `<strong>${item.name}</strong><br>Dmg ${item.damage} · Heal ${item.heal}<br>Cooldown ${item.cooldown}s · Preis ${item.price}<br>${item.rarity}`;
+    if (window.showTooltip) {
+      window.showTooltip(html, x, y);
+      return;
+    }
     const el = ensureTooltip();
-    el.innerHTML = `<strong>${item.name}</strong><br>Dmg ${item.damage} · Heal ${item.heal}<br>Cooldown ${item.cooldown}s · Preis ${item.price}<br>${item.rarity}`;
+    el.innerHTML = html;
     el.style.left = `${x + 12}px`;
     el.style.top = `${y + 12}px`;
     el.style.display = 'block';
   }
 
   function hideTooltip() {
+    if (window.hideTooltip) {
+      window.hideTooltip();
+      return;
+    }
     if (tooltipEl) tooltipEl.style.display = 'none';
   }
 
