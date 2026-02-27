@@ -52,7 +52,7 @@ export function ensureTooltip(){
 
 export function showTooltip(html, x, y){
   const t = ensureTooltip();
-  t.innerHTML = html;
+  if(typeof html === 'string') t.innerHTML = html;
   t.style.left = (x+12)+'px';
   t.style.top = (y+12)+'px';
   t.style.display = 'block';
