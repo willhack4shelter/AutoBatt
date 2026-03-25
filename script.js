@@ -30,6 +30,7 @@
     storageGrid: [],
     shopInstances: [],
     gold: CONFIG.startGold,
+    enemyLoadoutRevealed: false,
     battle: null
   };
 
@@ -211,6 +212,8 @@
   function renderGrid(containerId, grid, owner) {
     const root = document.getElementById(containerId);
     root.querySelectorAll('.grid-item').forEach((el) => el.remove());
+    const hideEnemyItems = !state.enemyLoadoutRevealed && (owner === 'enemy' || owner === 'enemy-storage');
+    if (hideEnemyItems) return;
     const cols = sizeForOwner(owner).cols;
 
     const seen = new Set();
@@ -398,6 +401,7 @@
   }
 
   function spawnEnemySetup() {
+    state.enemyLoadoutRevealed = false;
     state.enemyHP = CONFIG.maxHP;
     state.enemyGrid = emptyGrid(GRID.enemy.cols, GRID.enemy.rows);
     state.enemyStorageGrid = emptyGrid(GRID.enemyStorage.cols, GRID.enemyStorage.rows);
@@ -467,6 +471,7 @@
     }
 
     state.playerHP = CONFIG.maxHP;
+    state.enemyLoadoutRevealed = false;
     fillShop();
     spawnEnemySetup();
     renderAll();
@@ -485,6 +490,8 @@
       });
     });
 
+    state.enemyLoadoutRevealed = true;
+    renderAll();
     state.battle.timer = setInterval(battleTick, CONFIG.tickMs);
   }
 
@@ -497,7 +504,8 @@
       playerStorageGrid: serializeGrid(state.playerStorageGrid),
       enemyStorageGrid: serializeGrid(state.enemyStorageGrid),
       storageGrid: serializeGrid(state.storageGrid),
-      shopInstances: state.shopInstances.map(serializeItem)
+      shopInstances: state.shopInstances.map(serializeItem),
+      enemyLoadoutRevealed: state.enemyLoadoutRevealed
     };
     localStorage.setItem(CONFIG.saveKey, JSON.stringify(save));
   }
@@ -535,6 +543,7 @@
       state.enemyStorageGrid = materialize(data.enemyStorageGrid);
       state.storageGrid = materialize(data.storageGrid);
       state.shopInstances = materialize(data.shopInstances);
+      state.enemyLoadoutRevealed = Boolean(data.enemyLoadoutRevealed);
 
       const max = [state.playerGrid, state.enemyGrid, state.playerStorageGrid, state.enemyStorageGrid, state.storageGrid, state.shopInstances]
         .flat()
@@ -560,6 +569,7 @@
     state.enemyStorageGrid = emptyGrid(GRID.enemyStorage.cols, GRID.enemyStorage.rows);
     state.storageGrid = emptyGrid(GRID.storage.cols, GRID.storage.rows);
     state.shopInstances = [];
+    state.enemyLoadoutRevealed = false;
     state.battle = null;
   }
 
